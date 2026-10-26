@@ -89,6 +89,10 @@ footer { text-align: center; }
     <p class="unterzeile">Was ich wirklich selbst gemacht, gedacht und durchgezogen habe</p>
     <p class="bilanz" id="bilanz"></p>
   </header>
+  <section class="karte gruppe" id="spitze" hidden>
+    <h3>Zuletzt geschafft</h3>
+    <ul id="spitze-liste"></ul>
+  </section>
   <div class="leiste">
     <div class="umschalter" role="group" aria-label="Filter" id="filter"></div>
     <button class="knopf" id="zeig" type="button">Zeig mir was</button>
@@ -211,6 +215,15 @@ function zeichnen() {
   const n = (a) => punkte.filter(p => p.art === a).length;
   $("bilanz").textContent = `${punkte.length} Dinge selbst gemacht · ${n("idee")} eigene Ideen · `
     + `${n("problem")} Probleme überwunden · ${n("einwand")}× nachgehakt`;
+  /* Oben ohne Klick: die drei neuesten „Geschafft“-Einträge, solche mit Zahlen zuerst –
+     an schlechten Abenden soll man nichts suchen oder entscheiden müssen */
+  const geschafft = punkte.filter(p => p.art === "geschafft")
+    .sort((a, b) => b.datum.localeCompare(a.datum) || /\d/.test(b.text) - /\d/.test(a.text));
+  const spitze = [...geschafft.filter(p => /\d/.test(p.text)), ...geschafft.filter(p => !/\d/.test(p.text))]
+    .sort((a, b) => b.datum.localeCompare(a.datum)).slice(0, 3);
+  $("spitze-liste").replaceChildren(...spitze.map(p => el("li", {}, [zusammen(p.text) + " ",
+    el("span", { class: "klein", text: "· " + new Date(p.datum + "T12:00:00").toLocaleDateString("de-DE", { day: "numeric", month: "long" }) })])));
+  $("spitze").hidden = !spitze.length;
   const box = $("tage"); box.replaceChildren();
   for (const t of [...tage].sort((a, b) => b.datum.localeCompare(a.datum))) {
     const hier = punkte.filter(p => p.datum === t.datum && (filter === "alle" || p.art === filter));
