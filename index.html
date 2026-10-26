@@ -77,9 +77,23 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px 
 
 /* „Zeig mir was“ */
 .zeig { display: grid; gap: 14px; justify-items: start; }
+/* Feste Mindesthöhe, damit die Seite beim nächsten Eintrag nicht springt */
 #zufall {
-  width: 100%; border-left: 3px solid var(--blitz); padding: 6px 0 6px 18px; display: grid; gap: 4px;
+  width: 100%; min-height: 7.5em; border-left: 3px solid var(--blitz); padding: 6px 0 6px 18px;
+  display: grid; gap: 4px; align-content: center;
 }
+
+/* Vorher → Nachher */
+.rekorde { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.rekord {
+  border-radius: 14px; padding: 16px; display: grid; gap: 4px;
+  background: linear-gradient(160deg, var(--platte-hoch), var(--platte) 60%); border: 1px solid var(--kante);
+}
+.rekord .werte { font-family: var(--anzeige); font-size: 1.9rem; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.rekord .vorher { color: var(--leise); text-decoration: line-through; text-decoration-thickness: 2px; font-weight: 700; }
+.rekord .pfeil { color: var(--stahl); margin: 0 6px; }
+.rekord .einheit { font-size: 1rem; font-weight: 600; margin-left: 4px; }
+.rekord p { margin: 0; color: var(--grau); font-size: .9rem; }
 #zufall-text { font-family: var(--anzeige); font-size: clamp(1.25rem, 3.4vw, 1.6rem); font-weight: 500; line-height: 1.3; margin: 0; }
 #zufall-herkunft { color: var(--grau); font-size: .85rem; margin: 0; }
 @media (prefers-reduced-motion: no-preference) {
@@ -93,7 +107,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px 
 .abschnitt > p.hinweis { color: var(--grau); margin: -8px 0 0; font-size: .92rem; }
 
 /* Stärken als Plaketten */
-.plaketten { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.plaketten { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; align-items: start; }
 .plakette {
   position: relative; border-radius: 14px; padding: 16px 16px 14px;
   background: linear-gradient(160deg, var(--platte-hoch), var(--platte) 60%);
@@ -101,19 +115,17 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px 
   box-shadow: 0 1px 0 rgba(255,255,255,.06) inset;
   display: grid; gap: 6px; align-content: start;
 }
-.plakette .zahl { font-family: var(--anzeige); font-size: 2.4rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
-.plakette .zahl small { font-family: var(--schrift); font-size: .8rem; font-weight: 500; color: var(--grau); margin-left: 6px; -webkit-text-fill-color: var(--grau); }
-.plakette h3 { font-size: 1.1rem; font-weight: 700; }
+.plakette h3 { font-size: 1.15rem; font-weight: 700; }
 .plakette p { margin: 0; color: var(--grau); font-size: .88rem; }
+/* Statt einer großen (womöglich kleinen) Zahl: der stärkste Beleg als Vorschau */
+.plakette .vorschau { color: var(--text); font-size: .95rem; padding-left: 10px; border-left: 2px solid var(--kante); }
 .plakette details { margin-top: 4px; }
 .plakette summary { cursor: pointer; color: var(--stahl); font-size: .88rem; list-style: none; }
 .plakette summary::-webkit-details-marker { display: none; }
 .plakette summary::before { content: "▸ "; }
 .plakette details[open] summary::before { content: "▾ "; }
-.plakette details[open] { grid-column: 1 / -1; }
 .belege { margin: 10px 0 0; padding-left: 1.1em; display: grid; gap: 6px; font-size: .92rem; }
 .belege li::marker { color: var(--stahl); }
-.plakette:has(details[open]) { grid-column: 1 / -1; }
 
 /* Zuletzt geschafft */
 .spitze { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
@@ -161,22 +173,22 @@ footer { text-align: center; }
   </header>
 
   <div class="zeig">
-    <button class="knopf" id="zeig" type="button">Zeig mir was</button>
     <div id="zufall" hidden>
       <p id="zufall-text"></p>
       <p id="zufall-herkunft"></p>
     </div>
+    <button class="knopf" id="zeig" type="button">Noch eins</button>
   </div>
+
+  <section class="abschnitt" id="rekorde-teil" hidden>
+    <h2 class="chrom">Vorher → Nachher</h2>
+    <div class="rekorde" id="rekorde"></div>
+  </section>
 
   <section class="abschnitt" id="staerken-teil">
     <h2 class="chrom">Was mich ausmacht</h2>
     <p class="hinweis">Jede Stärke sammelt Belege. Je länger das Tagebuch läuft, desto länger die Liste.</p>
     <div class="plaketten" id="plaketten"></div>
-  </section>
-
-  <section class="abschnitt" id="spitze-teil" hidden>
-    <h2 class="chrom">Zuletzt geschafft</h2>
-    <ul class="spitze" id="spitze-liste"></ul>
   </section>
 
   <section class="abschnitt">
@@ -197,7 +209,8 @@ const ARTEN = {
 };
 /* „Zeig mir was“ ist der Knopf für schlechte Abende: nur Einträge, die für sich allein aufbauen.
    Nachgehakt-Einträge klingen ohne Zusammenhang leicht nach Fehler („Versehen“, „korrigiert“). */
-const AUFBAUEND = ["geschafft", "problem", "loesung", "idee"];
+/* Ideen ebenfalls nicht: „gewünscht, dass …“ wirkt allein gezeigt wie „das ist doch nichts“ */
+const AUFBAUEND = ["geschafft", "problem", "loesung"];
 /* Zahl und Einheit zusammenhalten („19 s“ nicht als „19 / s“) */
 const zusammen = (t) => t.replace(/(\d) (?=(s|ms|%|GB|MB|KB|Sekunden?|Minuten?|Stunden?|Tage?n?|WPM|Wörter)\b)/g, "$1 ");
 const SPEICHER = "tagebuch-schluessel";
@@ -297,8 +310,9 @@ function zeichnen() {
   /* Bilanz: zuerst, was geschafft ist – die Zahl der Tage ist kein Maßstab */
   const n = (a) => punkte.filter(p => p.art === a).length;
   const sichtbar = staerken.filter(s => punkte.filter(p => (p.staerken || []).includes(s.name)).length >= 2).length;
+  /* Nur Zahlen, die groß sind oder schnell wachsen – eine kleine Zahl neben der 49 liest sich wie ein Mangel */
   const zahlen = [[punkte.length, "Dinge selbst gemacht"], [sichtbar, "Stärken mit Belegen"],
-                  [n("idee"), "eigene Ideen"], [n("problem"), "Probleme überwunden"]];
+                  [n("idee"), "eigene Ideen"]];
   $("bilanz").replaceChildren(...zahlen.map(([z, t]) => el("li", {}, [el("b", { class: "chrom", text: String(z) }), el("span", { text: t })])));
 
   /* Stärken: sortiert nach Zahl der Belege, jede mit allen Belegen zum Aufklappen */
@@ -306,25 +320,44 @@ function zeichnen() {
     /* Erst ab 2 Belegen zeigen: eine Stärke mit einem einzigen Beleg wirkt an schlechten Tagen dünn */
     .filter(s => s.belege.length >= 2).sort((a, b) => b.belege.length - a.belege.length);
   $("plaketten").replaceChildren(...mitBelegen.map(s => {
-    const liste = el("ul", { class: "belege" }, [...s.belege].sort((a, b) => b.datum.localeCompare(a.datum))
-      .map(p => el("li", {}, [zusammen(p.text) + " ", el("span", { class: "datum-klein", text: "· " + datumKurz(p.datum) })])));
+    const sortiert = [...s.belege].sort((a, b) => b.datum.localeCompare(a.datum));
+    /* Vorschau: der gewichtigste Beleg, mit Zahl bevorzugt – ein echtes Beispiel statt Horoskop-Satz */
+    const vorschau = [...s.belege].sort((a, b) =>
+      ((b.gewicht ?? 2) - (a.gewicht ?? 2)) || (/\d/.test(b.text) - /\d/.test(a.text)))[0];
+    const liste = el("ul", { class: "belege" }, sortiert.map(p => el("li", {}, [zusammen(p.text) + " ",
+      el("span", { class: "datum-klein", text: "· " + datumKurz(p.datum) })])));
     return el("article", { class: "plakette" }, [
-      el("div", { class: "zahl chrom" }, [String(s.belege.length), el("small", { text: s.belege.length === 1 ? "Beleg" : "Belege" })]),
-      el("h3", { text: s.name }),
-      el("p", { text: s.beschreibung || "" }),
-      el("details", {}, [el("summary", { text: "Belege ansehen" }), liste]),
+      el("h3", { class: "chrom", text: s.name }),
+      el("p", { class: "vorschau", text: zusammen(vorschau.text) }),
+      el("details", {}, [el("summary", { text: `Alle ${s.belege.length} Belege` }), liste]),
     ]);
   }));
   $("staerken-teil").hidden = !mitBelegen.length;
 
-  /* Zuletzt geschafft: die drei neuesten „Geschafft“-Einträge, solche mit Zahlen zuerst –
-     an schlechten Abenden soll man nichts suchen oder entscheiden müssen */
-  const geschafft = punkte.filter(p => p.art === "geschafft");
-  const spitze = [...geschafft.filter(p => /\d/.test(p.text)), ...geschafft.filter(p => !/\d/.test(p.text))]
-    .sort((a, b) => b.datum.localeCompare(a.datum)).slice(0, 3);
-  $("spitze-liste").replaceChildren(...spitze.map(p => el("li", {}, [zusammen(p.text) + " ",
-    el("span", { class: "datum-klein", text: "· " + datumKurz(p.datum) })])));
-  $("spitze-teil").hidden = !spitze.length;
+  /* Vorher → Nachher: Verbesserungen mit zwei Zahlen werden aus den Texten gelesen
+     („von 41 auf 20 Sekunden“, „1,4 statt 8,0 s“) – die Antwort auf „ich werde nie besser“ */
+  const rekorde = [];
+  for (const p of punkte.filter(p => p.art === "geschafft" || p.art === "problem")) {
+    for (const teil of p.text.split(/[,:;]\s+(?=\D)/)) {
+      let m = teil.match(/^(.*?)\s*von\s+(?:etwa\s+)?(\d+(?:,\d+)?)\s+auf\s+(\d+(?:,\d+)?)\s*([A-Za-zÄÖÜäöüß%]+)?/);
+      let name, vorher, nachher, einheit;
+      if (m) [, name, vorher, nachher, einheit] = m;
+      else if ((m = teil.match(/^(.*?)\s*(\d+(?:,\d+)?)\s+statt\s+(\d+(?:,\d+)?)\s*([A-Za-zÄÖÜäöüß%]+)?/)))
+        [, name, nachher, vorher, einheit] = m;
+      else continue;
+      name = name.replace(/\b(jetzt|in|nur noch|etwa)\s*$/g, "").replace(/\b(jetzt|in)\s*$/g, "").trim();
+      if (name) rekorde.push({ name, vorher, nachher, einheit: einheit || "", datum: p.datum });
+    }
+  }
+  $("rekorde").replaceChildren(...rekorde.map(r => el("article", { class: "rekord" }, [
+    el("div", { class: "werte" }, [el("span", { class: "vorher", text: r.vorher }), el("span", { class: "pfeil", text: "→" }),
+      el("span", { class: "chrom", text: r.nachher }), el("span", { class: "einheit chrom", text: r.einheit })]),
+    el("p", { text: `${r.name} · ${datumKurz(r.datum)}` }),
+  ])));
+  $("rekorde-teil").hidden = !rekorde.length;
+
+  /* Beim Öffnen sofort ein starker Eintrag, ohne Klick */
+  if (zuletzt === null) { neuMischen(); zeigNaechsten(); }
 
   /* Woche für Woche: Ein magerer Tag steht nie allein, er gehört zu seiner Woche.
      Gewichtige Punkte zuerst, der Rest hinter „weitere zeigen“ – nie als „Kleinigkeiten“ benannt. */
@@ -334,8 +367,11 @@ function zeichnen() {
   for (const start of Object.keys(wochen).sort().reverse()) {
     const wp = punkte.filter(p => wochenStart(p.datum) === start);
     if (!wp.length) continue;
+    /* Ehrlich benennen: Gibt es in der Woche nur einen Tag, heißt die Karte nach dem Tag */
+    const tageMit = new Set(wp.map(p => p.datum));
+    const nurEinTag = tageMit.size === 1;
     const karte = el("article", { class: "woche" }, [
-      el("h3", {}, ["Woche ab " + datumKurz(start), el("span", { text: `${wp.length} Einträge` })])]);
+      el("h3", { text: nurEinTag ? datumLang([...tageMit][0]) : "Woche ab " + datumKurz(start) })]);
     const versteckt = [];
     for (const t of wochen[start].sort((a, b) => b.datum.localeCompare(a.datum))) {
       const tp = wp.filter(p => p.datum === t.datum);
@@ -351,7 +387,7 @@ function zeichnen() {
         ul.append(li); versteckt.push(li);
       }
       karte.append(el("section", { class: "tag" }, [
-        el("h4", { text: datumLang(t.datum) }),
+        nurEinTag ? null : el("h4", { text: datumLang(t.datum) }),
         t.satz ? el("p", { class: "satz", text: t.satz }) : null, ul]));
     }
     if (versteckt.length) {
@@ -363,17 +399,27 @@ function zeichnen() {
   }
 }
 
-$("zeig").addEventListener("click", () => {
-  let p = allePunkte().filter(x => AUFBAUEND.includes(x.art) && (x.gewicht ?? 2) >= 2);
-  if (!p.length) return;
-  const mitZahl = p.filter(x => /\d/.test(x.text));
-  if (mitZahl.length >= 3 && Math.random() < 0.7) p = mitZahl;
-  const x = p[Math.floor(Math.random() * p.length)];
+/* Ein „Stapel“ wie beim Kartenmischen: jeder Eintrag kommt einmal dran, bevor sich etwas wiederholt.
+   Einträge mit Zahlen liegen oben, damit der erste beim Öffnen sofort trägt. */
+let stapel = [];
+function neuMischen() {
+  const pool = allePunkte().filter(x => AUFBAUEND.includes(x.art) && (x.gewicht ?? 2) >= 2);
+  const mischen = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  stapel = [...mischen(pool.filter(x => /\d/.test(x.text))), ...mischen(pool.filter(x => !/\d/.test(x.text)))];
+}
+let zuletzt = null;
+function zeigNaechsten() {
+  if (!stapel.length) neuMischen();
+  if (!stapel.length) return;
+  /* auch über eine Neu-Mischung hinweg nie zweimal hintereinander dasselbe */
+  if (stapel.length > 1 && stapel[0].text === zuletzt) stapel.push(stapel.shift());
+  const x = stapel.shift();
+  zuletzt = x.text;
   $("zufall-text").textContent = zusammen(x.text);
-  const st = (x.staerken || [])[0];
-  $("zufall-herkunft").textContent = `${datumLang(x.datum)}${st ? " · " + st : ""}`;
+  $("zufall-herkunft").textContent = `${ARTEN[x.art]} · ${datumLang(x.datum)}`;
   $("zufall").hidden = false;
-});
+}
+$("zeig").addEventListener("click", zeigNaechsten);
 </script>
 </body>
 </html>
