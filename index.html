@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Privat</title>
+<style>
+/* Schlicht wie Johans andere Seiten: Systemschrift, weiße Karten, keine Farbakzente.
+   Vor dem Entsperren steht nur „Privat“ da – Titel und Inhalt verraten nichts. */
+:root {
+  --grund: #f4f3f0; --karte: #ffffff; --rand: #e4e2dd; --text: #22211f; --grau: #75726c;
+  --leise: #edebe7; --knopf: #2b2a28; --knopf-text: #ffffff; --fehler: #b3261e;
+  --schrift: -apple-system, "Segoe UI", system-ui, Roboto, Ubuntu, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --grund: #1b1b1a; --karte: #252523; --rand: #353431; --text: #ecebe8; --grau: #a19e97;
+    --leise: #2f2e2b; --knopf: #ecebe8; --knopf-text: #1b1b1a; --fehler: #f2b8b5;
+    color-scheme: dark;
+  }
+}
+body {
+  margin: 0; background: var(--grund); color: var(--text); font-family: var(--schrift);
+  font-size: 16px; line-height: 1.5; padding: 28px 16px 48px;
+}
+.seite { max-width: 680px; margin: 0 auto; display: grid; gap: 16px; }
+header { text-align: center; display: grid; gap: 4px; }
+h1 { font-size: 1.3rem; margin: 0; }
+.unterzeile, .bilanz { color: var(--grau); margin: 0; }
+.unterzeile { font-size: .95rem; }
+.bilanz { font-size: .9rem; font-variant-numeric: tabular-nums; margin-top: 4px; }
+.karte { background: var(--karte); border: 1px solid var(--rand); border-radius: 16px; padding: 18px 20px; }
+
+#schloss { max-width: 360px; margin: 12vh auto 0; display: grid; gap: 12px; text-align: center; }
+#schloss input[type="password"] {
+  font: inherit; color: var(--text); background: var(--karte); border: 1px solid var(--rand);
+  border-radius: 10px; padding: 10px 12px; width: 100%; box-sizing: border-box;
+}
+#schloss label.merken { color: var(--grau); font-size: .9rem; display: flex; gap: 8px; justify-content: center; align-items: center; }
+#fehler { color: var(--fehler); font-size: .9rem; margin: 0; min-height: 1.3em; }
+
+.leiste { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.umschalter { display: flex; flex-wrap: wrap; gap: 2px; background: var(--leise); border-radius: 10px; padding: 3px; }
+.umschalter button {
+  border: 0; background: transparent; color: var(--grau); font: inherit; font-size: .88rem;
+  padding: 5px 10px; border-radius: 8px; cursor: pointer;
+}
+.umschalter button[aria-pressed="true"] { background: var(--karte); color: var(--text); }
+.knopf {
+  border: 0; background: var(--knopf); color: var(--knopf-text); font: inherit; font-size: .9rem;
+  padding: 9px 14px; border-radius: 10px; cursor: pointer;
+}
+.knopf.still { background: var(--leise); color: var(--text); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--grau); outline-offset: 2px; }
+
+#zufall { text-align: center; display: grid; gap: 6px; }
+#zufall p { margin: 0; }
+#zufall .herkunft { color: var(--grau); font-size: .85rem; }
+.tag { display: grid; gap: 12px; }
+.tag h2 { font-size: 1.05rem; margin: 0; }
+.tag .datum { color: var(--grau); font-size: .85rem; font-weight: normal; margin-left: 6px; }
+.tag .satz { margin: 0; }
+.gruppe { display: grid; gap: 4px; }
+.gruppe h3 { font-size: .85rem; color: var(--grau); font-weight: 600; margin: 0; }
+.gruppe ul { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; }
+.gruppe li { overflow-wrap: anywhere; }
+.klein { color: var(--grau); font-size: .8rem; }
+.leer { text-align: center; color: var(--grau); }
+footer { text-align: center; }
+</style>
+</head>
+<body>
+
+<form id="schloss" autocomplete="on">
+  <h1>Privat</h1>
+  <input type="password" id="passwort" autocomplete="current-password" placeholder="Passwort" aria-label="Passwort">
+  <label class="merken"><input type="checkbox" id="merken"> Auf diesem Gerät merken</label>
+  <button class="knopf" type="submit" id="oeffnen">Öffnen</button>
+  <p id="fehler" role="alert"></p>
+</form>
+
+<div class="seite" id="inhalt" hidden>
+  <header>
+    <h1>Was ich kann</h1>
+    <p class="unterzeile">Was ich wirklich selbst gemacht, gedacht und durchgezogen habe</p>
+    <p class="bilanz" id="bilanz"></p>
+  </header>
+  <div class="karte" id="zufall" hidden>
+    <p id="zufall-text"></p>
+    <p class="herkunft" id="zufall-herkunft"></p>
+  </div>
+  <div class="leiste">
+    <div class="umschalter" role="group" aria-label="Filter" id="filter"></div>
+    <button class="knopf" id="zeig" type="button">Zeig mir was</button>
+  </div>
+  <div id="tage" class="seite"></div>
+  <footer><button class="knopf still" id="sperren" type="button">Sperren</button></footer>
+</div>
+
+<script>
+const ARTEN = {
+  geschafft: { mehr: "Geschafft", eins: "Geschafft" },
+  idee:      { mehr: "Eigene Ideen", eins: "Idee" },
+  loesung:   { mehr: "Selbst draufgekommen", eins: "Selbst draufgekommen" },
+  einwand:   { mehr: "Nachgehakt und widersprochen", eins: "Nachgehakt" },
+  problem:   { mehr: "Problem überwunden", eins: "Problem überwunden" },
+};
+const REIHENFOLGE = ["geschafft", "idee", "loesung", "einwand", "problem"];
+const SPEICHER = "tagebuch-schluessel";
+let tage = [], filter = "alle";
+
+const $ = (id) => document.getElementById(id);
+const aus64 = (s) => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const in64 = (b) => btoa(String.fromCharCode(...new Uint8Array(b)));
+const datumLang = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("de-DE",
+  { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+function el(tag, attrs = {}, kinder = []) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) k === "text" ? (e.textContent = v) : e.setAttribute(k, v);
+  for (const k of [].concat(kinder)) if (k) e.append(k);
+  return e;
+}
+const lies = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+const schreib = (k, v) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} };
+
+/* Entschlüsseln: PBKDF2-SHA256 → AES-256-GCM, passend zu veroeffentlichen.py */
+async function ladeDaten() {
+  const r = await fetch("daten.enc?" + Date.now(), { cache: "no-store" });
+  if (!r.ok) throw new Error("netz");
+  return r.json();
+}
+async function schluesselAus(passwort, paket) {
+  const roh = await crypto.subtle.importKey("raw", new TextEncoder().encode(passwort), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", hash: "SHA-256", salt: aus64(paket.salz), iterations: paket.runden },
+    roh, { name: "AES-GCM", length: 256 }, true, ["decrypt"]);
+}
+async function entschluesseln(schluessel, paket) {
+  const klar = await crypto.subtle.decrypt({ name: "AES-GCM", iv: aus64(paket.iv) }, schluessel, aus64(paket.daten));
+  return JSON.parse(new TextDecoder().decode(klar));
+}
+
+async function oeffnen(schluessel, paket, merken) {
+  const daten = await entschluesseln(schluessel, paket);
+  if (merken) schreib(SPEICHER, paket.salz + ":" + in64(await crypto.subtle.exportKey("raw", schluessel)));
+  tage = daten.tage || [];
+  $("schloss").hidden = true; $("inhalt").hidden = false;
+  document.title = "Was ich kann";
+  zeichnen();
+}
+
+$("schloss").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  $("fehler").textContent = ""; $("oeffnen").disabled = true; $("oeffnen").textContent = "Öffne …";
+  try {
+    const paket = await ladeDaten();
+    await oeffnen(await schluesselAus($("passwort").value, paket), paket, $("merken").checked);
+    $("passwort").value = "";
+  } catch (e) {
+    $("fehler").textContent = e.message === "netz" ? "Keine Verbindung. Später nochmal versuchen." : "Passwort stimmt nicht.";
+  } finally {
+    $("oeffnen").disabled = false; $("oeffnen").textContent = "Öffnen";
+  }
+});
+
+$("sperren").addEventListener("click", () => {
+  schreib(SPEICHER, null); tage = [];
+  $("inhalt").hidden = true; $("schloss").hidden = false; $("zufall").hidden = true;
+  document.title = "Privat";
+});
+
+/* Gemerkter Schlüssel: gilt, solange das Passwort (und damit das Salz) gleich bleibt */
+(async () => {
+  const g = lies(SPEICHER);
+  if (!g) return;
+  try {
+    const paket = await ladeDaten();
+    const [salz, roh] = g.split(":");
+    if (salz !== paket.salz) { schreib(SPEICHER, null); return; }
+    const k = await crypto.subtle.importKey("raw", aus64(roh), "AES-GCM", true, ["decrypt"]);
+    await oeffnen(k, paket, false);
+  } catch { schreib(SPEICHER, null); }
+})();
+
+for (const [key, name] of [["alle", "Alle"], ...REIHENFOLGE.map(a => [a, ARTEN[a].eins])]) {
+  const b = el("button", { type: "button", "aria-pressed": String(key === filter), text: name });
+  b.addEventListener("click", () => {
+    filter = key;
+    for (const x of $("filter").children) x.setAttribute("aria-pressed", String(x === b));
+    zeichnen();
+  });
+  $("filter").append(b);
+}
+
+function allePunkte() {
+  return tage.flatMap(t => (t.punkte || []).map(p => ({ ...p, datum: t.datum })))
+             .filter(p => ARTEN[p.art] && p.text);
+}
+
+function zeichnen() {
+  const punkte = allePunkte();
+  const n = (a) => punkte.filter(p => p.art === a).length;
+  const anzahlTage = new Set(punkte.map(p => p.datum)).size;
+  $("bilanz").textContent = `${anzahlTage} ${anzahlTage === 1 ? "Tag" : "Tage"} · ${punkte.length} Einträge · `
+    + `${n("idee")} eigene Ideen · ${n("einwand")}× nachgehakt · ${n("problem")} Probleme überwunden`;
+  const box = $("tage"); box.replaceChildren();
+  for (const t of [...tage].sort((a, b) => b.datum.localeCompare(a.datum))) {
+    const hier = punkte.filter(p => p.datum === t.datum && (filter === "alle" || p.art === filter));
+    if (!hier.length) continue;
+    const karte = el("article", { class: "karte tag" });
+    const [wochentag, ...rest] = datumLang(t.datum).split(", ");
+    karte.append(el("h2", {}, [wochentag, el("span", { class: "datum", text: rest.join(", ") })]));
+    if (t.satz && filter === "alle") karte.append(el("p", { class: "satz", text: t.satz }));
+    for (const a of REIHENFOLGE) {
+      const items = hier.filter(p => p.art === a);
+      if (!items.length) continue;
+      const ul = el("ul");
+      for (const p of items) ul.append(el("li", {}, [p.text + " ", p.chat ? el("span", { class: "klein", text: "· " + p.chat }) : null]));
+      karte.append(el("section", { class: "gruppe" }, [el("h3", { text: ARTEN[a].mehr }), ul]));
+    }
+    if (t.chats?.length && filter === "alle") karte.append(el("p", { class: "klein", text: "Aus: " + t.chats.join(" · ") }));
+    box.append(karte);
+  }
+  if (!box.children.length) box.append(el("div", { class: "karte leer", text: "Für diesen Filter gibt es noch nichts." }));
+}
+
+$("zeig").addEventListener("click", () => {
+  const p = allePunkte();
+  if (!p.length) return;
+  const x = p[Math.floor(Math.random() * p.length)];
+  $("zufall-text").textContent = x.text;
+  $("zufall-herkunft").textContent = `${ARTEN[x.art].eins} · ${datumLang(x.datum)}`;
+  $("zufall").hidden = false;
+});
+</script>
+</body>
+</html>
