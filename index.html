@@ -20,6 +20,8 @@
     color-scheme: dark;
   }
 }
+/* sonst schlägt display:grid das hidden-Attribut (Schloss, Zufallskarte) */
+[hidden] { display: none !important; }
 body {
   margin: 0; background: var(--grund); color: var(--text); font-family: var(--schrift);
   font-size: 16px; line-height: 1.5; padding: 28px 16px 48px;
