@@ -68,6 +68,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--grau); outl
 .gruppe ul { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; }
 .gruppe li { overflow-wrap: anywhere; }
 .klein { color: var(--grau); font-size: .8rem; }
+li .klein { white-space: nowrap; }
 .leer { text-align: center; color: var(--grau); }
 footer { text-align: center; }
 </style>
@@ -88,13 +89,13 @@ footer { text-align: center; }
     <p class="unterzeile">Was ich wirklich selbst gemacht, gedacht und durchgezogen habe</p>
     <p class="bilanz" id="bilanz"></p>
   </header>
-  <div class="karte" id="zufall" hidden>
-    <p id="zufall-text"></p>
-    <p class="herkunft" id="zufall-herkunft"></p>
-  </div>
   <div class="leiste">
     <div class="umschalter" role="group" aria-label="Filter" id="filter"></div>
     <button class="knopf" id="zeig" type="button">Zeig mir was</button>
+  </div>
+  <div class="karte" id="zufall" hidden>
+    <p id="zufall-text"></p>
+    <p class="herkunft" id="zufall-herkunft"></p>
   </div>
   <div id="tage" class="seite"></div>
   <footer><button class="knopf still" id="sperren" type="button">Sperren</button></footer>
@@ -102,12 +103,17 @@ footer { text-align: center; }
 
 <script>
 const ARTEN = {
-  geschafft: { mehr: "Geschafft", eins: "Geschafft" },
-  idee:      { mehr: "Eigene Ideen", eins: "Idee" },
-  loesung:   { mehr: "Selbst draufgekommen", eins: "Selbst draufgekommen" },
-  einwand:   { mehr: "Nachgehakt und widersprochen", eins: "Nachgehakt" },
-  problem:   { mehr: "Problem überwunden", eins: "Problem überwunden" },
+  geschafft: "Geschafft",
+  idee:      "Eigene Ideen",
+  loesung:   "Selbst draufgekommen",
+  einwand:   "Nachgehakt",
+  problem:   "Problem überwunden",
 };
+/* „Zeig mir was“ ist der Knopf für schlechte Abende: nur Einträge, die für sich allein aufbauen.
+   Nachgehakt-Einträge klingen ohne Zusammenhang leicht nach Fehler („Versehen“, „korrigiert“). */
+const AUFBAUEND = ["geschafft", "problem", "loesung", "idee"];
+/* Zahl und Einheit zusammenhalten („19 s“ nicht als „19 / s“) */
+const zusammen = (t) => t.replace(/(\d) (?=(s|ms|%|GB|MB|KB|Sekunden?|Minuten?|Stunden?|Tage?n?|WPM|Wörter)\b)/g, "$1\u00a0");
 const REIHENFOLGE = ["geschafft", "idee", "loesung", "einwand", "problem"];
 const SPEICHER = "tagebuch-schluessel";
 let tage = [], filter = "alle";
@@ -185,7 +191,7 @@ $("sperren").addEventListener("click", () => {
   } catch { schreib(SPEICHER, null); }
 })();
 
-for (const [key, name] of [["alle", "Alle"], ...REIHENFOLGE.map(a => [a, ARTEN[a].eins])]) {
+for (const [key, name] of [["alle", "Alle"], ...REIHENFOLGE.map(a => [a, ARTEN[a]])]) {
   const b = el("button", { type: "button", "aria-pressed": String(key === filter), text: name });
   b.addEventListener("click", () => {
     filter = key;
@@ -203,9 +209,8 @@ function allePunkte() {
 function zeichnen() {
   const punkte = allePunkte();
   const n = (a) => punkte.filter(p => p.art === a).length;
-  const anzahlTage = new Set(punkte.map(p => p.datum)).size;
-  $("bilanz").textContent = `${anzahlTage} ${anzahlTage === 1 ? "Tag" : "Tage"} · ${punkte.length} Einträge · `
-    + `${n("idee")} eigene Ideen · ${n("einwand")}× nachgehakt · ${n("problem")} Probleme überwunden`;
+  $("bilanz").textContent = `${punkte.length} Dinge selbst gemacht · ${n("idee")} eigene Ideen · `
+    + `${n("problem")} Probleme überwunden · ${n("einwand")}× nachgehakt`;
   const box = $("tage"); box.replaceChildren();
   for (const t of [...tage].sort((a, b) => b.datum.localeCompare(a.datum))) {
     const hier = punkte.filter(p => p.datum === t.datum && (filter === "alle" || p.art === filter));
@@ -218,8 +223,8 @@ function zeichnen() {
       const items = hier.filter(p => p.art === a);
       if (!items.length) continue;
       const ul = el("ul");
-      for (const p of items) ul.append(el("li", {}, [p.text + " ", p.chat ? el("span", { class: "klein", text: "· " + p.chat }) : null]));
-      karte.append(el("section", { class: "gruppe" }, [el("h3", { text: ARTEN[a].mehr }), ul]));
+      for (const p of items) ul.append(el("li", {}, [zusammen(p.text) + " ", p.chat ? el("span", { class: "klein", text: "· " + p.chat }) : null]));
+      karte.append(el("section", { class: "gruppe" }, [el("h3", { text: ARTEN[a] }), ul]));
     }
     if (t.chats?.length && filter === "alle") karte.append(el("p", { class: "klein", text: "Aus: " + t.chats.join(" · ") }));
     box.append(karte);
@@ -228,11 +233,13 @@ function zeichnen() {
 }
 
 $("zeig").addEventListener("click", () => {
-  const p = allePunkte();
+  let p = allePunkte().filter(x => filter === "alle" ? AUFBAUEND.includes(x.art) : x.art === filter);
   if (!p.length) return;
+  const mitZahl = p.filter(x => /\d/.test(x.text));
+  if (mitZahl.length >= 3 && Math.random() < 0.7) p = mitZahl;
   const x = p[Math.floor(Math.random() * p.length)];
-  $("zufall-text").textContent = x.text;
-  $("zufall-herkunft").textContent = `${ARTEN[x.art].eins} · ${datumLang(x.datum)}`;
+  $("zufall-text").textContent = zusammen(x.text);
+  $("zufall-herkunft").textContent = `${ARTEN[x.art]} · ${datumLang(x.datum)}`;
   $("zufall").hidden = false;
 });
 </script>
