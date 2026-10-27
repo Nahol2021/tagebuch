@@ -65,6 +65,8 @@ header h1 { font-size: clamp(2.6rem, 8vw, 4.2rem); font-weight: 800; line-height
 .bilanz li { display: grid; }
 .bilanz b { font-family: var(--anzeige); font-size: 2rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
 .bilanz span { color: var(--grau); font-size: .85rem; }
+/* Der laufende Tag fehlt noch – das soll nicht wie „heute nichts“ aussehen */
+.heute { margin: 4px 0 0; color: var(--stahl); font-size: .92rem; }
 
 .knopf {
   border: 0; font: inherit; font-weight: 600; cursor: pointer; border-radius: 999px;
@@ -79,7 +81,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px 
 .zeig { display: grid; gap: 14px; justify-items: start; }
 /* Feste Mindesthöhe, damit die Seite beim nächsten Eintrag nicht springt */
 #zufall {
-  width: 100%; min-height: 7.5em; border-left: 3px solid var(--blitz); padding: 6px 0 6px 18px;
+  width: 100%; min-height: 9.5em; border-left: 3px solid var(--blitz); padding: 6px 0 6px 18px;
   display: grid; gap: 4px; align-content: center;
 }
 
@@ -126,6 +128,8 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px 
 .plakette details[open] summary::before { content: "▾ "; }
 .belege { margin: 10px 0 0; padding-left: 1.1em; display: grid; gap: 6px; font-size: .92rem; }
 .belege li::marker { color: var(--stahl); }
+/* Datum als eigene kleine Zeile unter dem Beleg – in schmalen Karten hängt es sonst allein herum */
+.belege .datum-klein { display: block; }
 
 /* Zuletzt geschafft */
 .spitze { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
@@ -170,6 +174,7 @@ footer { text-align: center; }
     <h1 class="chrom">Was ich kann</h1>
     <p class="unterzeile">Was ich wirklich selbst gemacht, gedacht und durchgezogen habe. Jeder Punkt ist echt und belegt.</p>
     <ul class="bilanz" id="bilanz"></ul>
+    <p class="heute" id="heute" hidden></p>
   </header>
 
   <div class="zeig">
@@ -192,7 +197,7 @@ footer { text-align: center; }
   </section>
 
   <section class="abschnitt">
-    <h2 class="chrom">Woche für Woche</h2>
+    <h2 class="chrom">Verlauf</h2>
     <div id="wochen" class="abschnitt"></div>
   </section>
 
@@ -313,23 +318,36 @@ function zeichnen() {
   /* Nur Zahlen, die groß sind oder schnell wachsen – eine kleine Zahl neben der 49 liest sich wie ein Mangel */
   const zahlen = [[punkte.length, "Dinge selbst gemacht"], [sichtbar, "Stärken mit Belegen"],
                   [n("idee"), "eigene Ideen"]];
+  /* Hinweis für den laufenden Tag: Er kommt erst mit dem Abend-Lauf dazu */
+  const jetzt = new Date();
+  const heuteIso = new Date(jetzt.getTime() - jetzt.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  const letzter = tage.map(t => t.datum).sort().pop();
+  $("heute").hidden = !letzter || letzter >= heuteIso;
+  $("heute").textContent = `${datumLang(heuteIso)} kommt heute Abend um 22:30 dazu.`;
+
   $("bilanz").replaceChildren(...zahlen.map(([z, t]) => el("li", {}, [el("b", { class: "chrom", text: String(z) }), el("span", { text: t })])));
 
   /* Stärken: sortiert nach Zahl der Belege, jede mit allen Belegen zum Aufklappen */
   const mitBelegen = staerken.map(s => ({ ...s, belege: punkte.filter(p => (p.staerken || []).includes(s.name)) }))
     /* Erst ab 2 Belegen zeigen: eine Stärke mit einem einzigen Beleg wirkt an schlechten Tagen dünn */
     .filter(s => s.belege.length >= 2).sort((a, b) => b.belege.length - a.belege.length);
+  /* Vorschau: der gewichtigste Beleg, mit Zahl bevorzugt – ein echtes Beispiel statt Horoskop-Satz.
+     Jeder Satz wird nur einmal als Vorschau benutzt, sonst wirkt es gestreckt. */
+  const schonGezeigt = new Set();
   $("plaketten").replaceChildren(...mitBelegen.map(s => {
-    const sortiert = [...s.belege].sort((a, b) => b.datum.localeCompare(a.datum));
-    /* Vorschau: der gewichtigste Beleg, mit Zahl bevorzugt – ein echtes Beispiel statt Horoskop-Satz */
-    const vorschau = [...s.belege].sort((a, b) =>
-      ((b.gewicht ?? 2) - (a.gewicht ?? 2)) || (/\d/.test(b.text) - /\d/.test(a.text)))[0];
-    const liste = el("ul", { class: "belege" }, sortiert.map(p => el("li", {}, [zusammen(p.text) + " ",
-      el("span", { class: "datum-klein", text: "· " + datumKurz(p.datum) })])));
+    const kandidaten = [...s.belege].sort((a, b) =>
+      ((b.gewicht ?? 2) - (a.gewicht ?? 2)) || (/\d/.test(b.text) - /\d/.test(a.text)));
+    const vorschau = kandidaten.find(p => !schonGezeigt.has(p.text)) || kandidaten[0];
+    schonGezeigt.add(vorschau.text);
+    const rest = s.belege.filter(p => p !== vorschau).sort((a, b) => b.datum.localeCompare(a.datum));
+    const liste = el("ul", { class: "belege" }, rest.map(p => el("li", {}, [zusammen(p.text),
+      el("span", { class: "datum-klein", text: datumKurz(p.datum) })])));
+    /* Kleine Zahlen nicht nennen: „1 weiterer“ liest sich an schlechten Tagen wie ein Mangel */
+    const titel = rest.length >= 5 ? `${rest.length} weitere Belege` : "Weitere Belege";
     return el("article", { class: "plakette" }, [
       el("h3", { class: "chrom", text: s.name }),
       el("p", { class: "vorschau", text: zusammen(vorschau.text) }),
-      el("details", {}, [el("summary", { text: `Alle ${s.belege.length} Belege` }), liste]),
+      rest.length ? el("details", {}, [el("summary", { text: titel }), liste]) : null,
     ]);
   }));
   $("staerken-teil").hidden = !mitBelegen.length;
@@ -346,7 +364,9 @@ function zeichnen() {
         [, name, nachher, vorher, einheit] = m;
       else continue;
       name = name.replace(/\b(jetzt|in|nur noch|etwa)\s*$/g, "").replace(/\b(jetzt|in)\s*$/g, "").trim();
-      if (name) rekorde.push({ name, vorher, nachher, einheit: einheit || "", datum: p.datum });
+      /* Einheiten einheitlich kurz: „Sekunden“ und „s“ sollen nicht nebeneinander stehen */
+      einheit = { Sekunden: "s", Sekunde: "s", Minuten: "min", Minute: "min", Stunden: "h" }[einheit] ?? einheit ?? "";
+      if (name) rekorde.push({ name, vorher, nachher, einheit, datum: p.datum });
     }
   }
   $("rekorde").replaceChildren(...rekorde.map(r => el("article", { class: "rekord" }, [
