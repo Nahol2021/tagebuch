@@ -6,11 +6,11 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Privat</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap">
 <style>
-/* Johans eigene Welt: Gewitter-Nachthimmel wie sein Desktop, Schrift und Zahlen in Chrom
-   (Stahlblau → Platin wie seine Icons), Stärken als gravierte Metallplaketten.
-   Bewusst nur dunkel. Vor dem Entsperren steht nur „Privat“ da. */
+/* Ruhig und dunkel: die Farben von Johans Desktop (Nachtblau, Stahl, Platin), aber ohne Glanz,
+   Lichtschein und Verläufe – eine Schrift, flache Flächen. Die verspieltere „Gewitter/Chrom“-Fassung
+   liegt in Commit 28f9127 als Vorlage für ein anderes Projekt. Vor dem Entsperren steht nur „Privat“ da. */
 :root {
   --nacht: #0b111b;
   --himmel: #16223a;
@@ -23,8 +23,8 @@
   --stahl: #7f9ec4;
   --platin: #eef2f8;
   --blitz: #c9dcff;
-  --chrom: linear-gradient(180deg, #ffffff 0%, #dbe5f2 38%, #8ea8c9 62%, #e9eff7 100%);
-  --anzeige: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --knopf: #dde4ee;
+  --anzeige: "Figtree", -apple-system, "Segoe UI", system-ui, Ubuntu, sans-serif;
   --schrift: "Figtree", -apple-system, "Segoe UI", system-ui, Ubuntu, sans-serif;
   color-scheme: dark;
 }
@@ -34,22 +34,17 @@ html { background: var(--nacht); }
 body {
   margin: 0; min-height: 100vh; color: var(--text); font-family: var(--schrift);
   font-size: 16px; line-height: 1.55;
-  background:
-    radial-gradient(1200px 520px at 70% -120px, rgba(127, 158, 196, .28), transparent 70%),
-    radial-gradient(700px 380px at 10% 0, rgba(201, 220, 255, .10), transparent 70%),
-    linear-gradient(180deg, var(--himmel) 0, var(--nacht) 640px);
-  background-repeat: no-repeat;
+  background: linear-gradient(180deg, #111a2a 0, var(--nacht) 420px) no-repeat, var(--nacht);
   padding: 40px 16px 64px;
 }
 .seite { max-width: 760px; margin: 0 auto; display: grid; gap: 28px; }
-.chrom {
-  background: var(--chrom); -webkit-background-clip: text; background-clip: text; color: transparent;
-}
+/* früher Chrom-Verlauf, jetzt schlicht hell */
+.chrom { color: var(--platin); }
 h1, h2, h3 { font-family: var(--anzeige); margin: 0; text-wrap: balance; }
 
 /* Schloss */
 #schloss { max-width: 360px; margin: 14vh auto 0; display: grid; gap: 14px; text-align: center; }
-#schloss h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: -.01em; }
+#schloss h1 { font-size: 2rem; font-weight: 700; }
 #schloss input[type="password"] {
   font: inherit; color: var(--text); background: var(--platte); border: 1px solid var(--kante);
   border-radius: 12px; padding: 12px 14px; width: 100%;
@@ -59,21 +54,20 @@ h1, h2, h3 { font-family: var(--anzeige); margin: 0; text-wrap: balance; }
 
 /* Kopf */
 header { display: grid; gap: 10px; padding-top: 8px; }
-header h1 { font-size: clamp(2.6rem, 8vw, 4.2rem); font-weight: 800; line-height: .95; letter-spacing: -.02em; }
+header h1 { font-size: clamp(2.2rem, 6vw, 3rem); font-weight: 700; line-height: 1.05; letter-spacing: -.01em; }
 .unterzeile { color: var(--grau); margin: 0; max-width: 46ch; }
 .bilanz { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 6px 0 0; padding: 0; list-style: none; }
 .bilanz li { display: grid; }
-.bilanz b { font-family: var(--anzeige); font-size: 2rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.bilanz b { font-family: var(--anzeige); font-size: 1.7rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
 .bilanz span { color: var(--grau); font-size: .85rem; }
 /* Der laufende Tag fehlt noch – das soll nicht wie „heute nichts“ aussehen */
 .heute { margin: 4px 0 0; color: var(--stahl); font-size: .92rem; }
 
 .knopf {
-  border: 0; font: inherit; font-weight: 600; cursor: pointer; border-radius: 999px;
-  padding: 12px 22px; color: #0b111b; background: var(--chrom);
-  box-shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 6px 20px rgba(127,158,196,.25);
+  border: 0; font: inherit; font-weight: 600; cursor: pointer; border-radius: 10px;
+  padding: 10px 18px; color: #0b111b; background: var(--knopf);
 }
-.knopf:hover { filter: brightness(1.06); }
+.knopf:hover { background: var(--platin); }
 .knopf.still { background: transparent; color: var(--grau); border: 1px solid var(--kante); box-shadow: none; }
 button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--blitz); outline-offset: 3px; }
 
@@ -81,27 +75,23 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px 
 .zeig { display: grid; gap: 14px; justify-items: start; }
 /* Feste Mindesthöhe, damit die Seite beim nächsten Eintrag nicht springt */
 #zufall {
-  width: 100%; min-height: 9.5em; border-left: 3px solid var(--blitz); padding: 6px 0 6px 18px;
+  width: 100%; min-height: 9.5em; border-left: 2px solid var(--stahl); padding: 6px 0 6px 18px;
   display: grid; gap: 4px; align-content: center;
 }
 
 /* Vorher → Nachher */
 .rekorde { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
 .rekord {
-  border-radius: 14px; padding: 16px; display: grid; gap: 4px;
-  background: linear-gradient(160deg, var(--platte-hoch), var(--platte) 60%); border: 1px solid var(--kante);
+  border-radius: 12px; padding: 16px; display: grid; gap: 4px;
+  background: var(--platte); border: 1px solid var(--kante);
 }
-.rekord .werte { font-family: var(--anzeige); font-size: 1.9rem; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.rekord .werte { font-family: var(--anzeige); font-size: 1.7rem; font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums; }
 .rekord .vorher { color: var(--leise); text-decoration: line-through; text-decoration-thickness: 2px; font-weight: 700; }
 .rekord .pfeil { color: var(--stahl); margin: 0 6px; }
 .rekord .einheit { font-size: 1rem; font-weight: 600; margin-left: 4px; }
 .rekord p { margin: 0; color: var(--grau); font-size: .9rem; }
-#zufall-text { font-family: var(--anzeige); font-size: clamp(1.25rem, 3.4vw, 1.6rem); font-weight: 500; line-height: 1.3; margin: 0; }
+#zufall-text { font-family: var(--anzeige); font-size: clamp(1.15rem, 3vw, 1.4rem); font-weight: 500; line-height: 1.35; margin: 0; }
 #zufall-herkunft { color: var(--grau); font-size: .85rem; margin: 0; }
-@media (prefers-reduced-motion: no-preference) {
-  #zufall:not([hidden]) { animation: auf .35s ease-out; }
-  @keyframes auf { from { opacity: 0; transform: translateY(6px); } }
-}
 
 /* Abschnitte */
 .abschnitt { display: grid; gap: 14px; }
@@ -111,10 +101,8 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px 
 /* Stärken als Plaketten */
 .plaketten { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; align-items: start; }
 .plakette {
-  position: relative; border-radius: 14px; padding: 16px 16px 14px;
-  background: linear-gradient(160deg, var(--platte-hoch), var(--platte) 60%);
-  border: 1px solid var(--kante);
-  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset;
+  position: relative; border-radius: 12px; padding: 16px 16px 14px;
+  background: var(--platte); border: 1px solid var(--kante);
   display: grid; gap: 6px; align-content: start;
 }
 .plakette h3 { font-size: 1.15rem; font-weight: 700; }
