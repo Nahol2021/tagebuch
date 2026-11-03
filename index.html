@@ -304,10 +304,13 @@ function zeichnen() {
   const ersterTag = punkte.map(p => p.datum).sort()[0];
 
   /* Bilanz: zuerst, was geschafft ist – die Zahl der Tage ist kein Maßstab */
-  const n = (a) => punkte.filter(p => p.art === a).length;
+  /* Gezählt wird nur Gewichtiges (Gewicht 2–3): Kleinkram in der Zahl macht sie an schlechten Tagen
+     unglaubwürdig („wenn bestellen schon zählt …“). Im Verlauf bleibt er sichtbar. */
+  const zaehlbar = punkte.filter(p => (p.gewicht ?? 2) >= 2);
+  const n = (a) => zaehlbar.filter(p => p.art === a).length;
   const sichtbar = staerken.filter(s => punkte.filter(p => (p.staerken || []).includes(s.name)).length >= 2).length;
   /* Nur Zahlen, die groß sind oder schnell wachsen – eine kleine Zahl neben der 49 liest sich wie ein Mangel */
-  const zahlen = [[punkte.length, "Dinge selbst gemacht"], [sichtbar, "Stärken mit Belegen"],
+  const zahlen = [[zaehlbar.length, "Dinge selbst gemacht"], [sichtbar, "Stärken mit Belegen"],
                   [n("idee"), "eigene Ideen"]];
   /* Hinweis für den laufenden Tag: Er kommt erst mit dem Abend-Lauf dazu */
   const jetzt = new Date();
