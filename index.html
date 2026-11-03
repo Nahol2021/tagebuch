@@ -105,7 +105,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px 
   background: var(--platte); border: 1px solid var(--kante);
   display: grid; gap: 6px; align-content: start;
 }
-.plakette h3 { font-size: 1.15rem; font-weight: 700; }
+.plakette h3 { font-size: 1.05rem; font-weight: 700; }
 .plakette p { margin: 0; color: var(--grau); font-size: .88rem; }
 /* Statt einer großen (womöglich kleinen) Zahl: der stärkste Beleg als Vorschau */
 .plakette .vorschau { color: var(--text); font-size: .95rem; padding-left: 10px; border-left: 2px solid var(--kante); }
@@ -114,7 +114,10 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px 
 .plakette summary::-webkit-details-marker { display: none; }
 .plakette summary::before { content: "▸ "; }
 .plakette details[open] summary::before { content: "▾ "; }
-.belege { margin: 10px 0 0; padding-left: 1.1em; display: grid; gap: 6px; font-size: .92rem; }
+/* Feste Höhe, darin scrollen: sonst wächst eine Karte endlos und daneben entsteht ein schwarzes Loch */
+.belege { margin: 10px 0 0; padding-left: 1.1em; display: grid; gap: 6px; font-size: .92rem;
+  max-height: 22em; overflow-y: auto; padding-right: 6px; }
+.leer-tag { margin: 0; color: var(--grau); font-size: .92rem; }
 .belege li::marker { color: var(--stahl); }
 /* Datum als eigene kleine Zeile unter dem Beleg – in schmalen Karten hängt es sonst allein herum */
 .belege .datum-klein { display: block; }
@@ -331,7 +334,8 @@ function zeichnen() {
     const liste = el("ul", { class: "belege" }, rest.map(p => el("li", {}, [zusammen(p.text),
       el("span", { class: "datum-klein", text: datumKurz(p.datum) })])));
     /* Kleine Zahlen nicht nennen: „1 weiterer“ liest sich an schlechten Tagen wie ein Mangel */
-    const titel = rest.length >= 5 ? `${rest.length} weitere Belege` : "Weitere Belege";
+    /* Überall gleich, ohne Zahl: kleine Zahlen lesen sich wie ein Mangel, große mal mit, mal ohne wirkte uneinheitlich */
+    const titel = "Alle Belege ansehen";
     return el("article", { class: "plakette" }, [
       el("h3", { class: "chrom", text: s.name }),
       el("p", { class: "vorschau", text: zusammen(vorschau.text) }),
@@ -342,18 +346,30 @@ function zeichnen() {
 
   /* Vorher → Nachher: Verbesserungen mit zwei Zahlen werden aus den Texten gelesen
      („von 41 auf 20 Sekunden“, „1,4 statt 8,0 s“) – die Antwort auf „ich werde nie besser“ */
+  /* Nur mit echter Einheit – sonst entstehen Kacheln wie „0,20 → 0,18 senken“ (Verb statt Einheit).
+     Einheiten einheitlich kurz: „Sekunden“ und „s“ sollen nicht nebeneinander stehen. */
+  const EINHEITEN = { s: "s", Sekunde: "s", Sekunden: "s", min: "min", Minute: "min", Minuten: "min", h: "h",
+    Stunden: "h", KB: "KB", MB: "MB", GB: "GB", "%": "%", mm: "mm", WPM: "WPM", "Einträge": "Einträge" };
+  /* Beschriftung höchstens drei Wörter, ohne Füllwörter am Rand („im Hauptordner“ → „Hauptordner“) */
+  const kurzName = (vor, nach) => {
+    const w = vor.replace(/\b(jetzt|nur noch|etwa)\b/g, " ").trim().split(/\s+/).filter(Boolean).slice(-3);
+    while (w.length && /^(im|in|am|beim|bei|von|auf|mit|der|die|das)$/i.test(w[0])) w.shift();
+    while (w.length && /^(in|im|von|auf|mit)$/i.test(w[w.length - 1])) w.pop();
+    return w.join(" ") || nach.replace(/[.!]$/, "");
+  };
   const rekorde = [];
   for (const p of punkte.filter(p => p.art === "geschafft" || p.art === "problem")) {
-    for (const teil of p.text.split(/[,:;]\s+(?=\D)/)) {
-      let m = teil.match(/^(.*?)\s*von\s+(?:etwa\s+)?(\d+(?:,\d+)?)\s+auf\s+(\d+(?:,\d+)?)\s*([A-Za-zÄÖÜäöüß%]+)?/);
-      let name, vorher, nachher, einheit;
-      if (m) [, name, vorher, nachher, einheit] = m;
-      else if ((m = teil.match(/^(.*?)\s*(\d+(?:,\d+)?)\s+statt\s+(\d+(?:,\d+)?)\s*([A-Za-zÄÖÜäöüß%]+)?/)))
-        [, name, nachher, vorher, einheit] = m;
+    /* Am Doppelpunkt immer trennen, am Komma nur vor Text („1,4“ ist eine Zahl, kein Satzende) */
+    for (const teil of p.text.split(/:\s+|[,;]\s+(?=\D)/)) {
+      let m = teil.match(/^(.*?)\s*von\s+(?:etwa\s+)?(\d+(?:,\d+)?)\s+auf\s+(\d+(?:,\d+)?)\s*(\S+)?\s*(\S+)?/);
+      let vor, vorher, nachher, einheit, nach;
+      if (m) [, vor, vorher, nachher, einheit, nach] = m;
+      else if ((m = teil.match(/^(.*?)\s*(\d+(?:,\d+)?)\s+statt\s+(\d+(?:,\d+)?)\s*(\S+)?\s*(\S+)?/)))
+        [, vor, nachher, vorher, einheit, nach] = m;
       else continue;
-      name = name.replace(/\b(jetzt|in|nur noch|etwa)\s*$/g, "").replace(/\b(jetzt|in)\s*$/g, "").trim();
-      /* Einheiten einheitlich kurz: „Sekunden“ und „s“ sollen nicht nebeneinander stehen */
-      einheit = { Sekunden: "s", Sekunde: "s", Minuten: "min", Minute: "min", Stunden: "h" }[einheit] ?? einheit ?? "";
+      einheit = EINHEITEN[(einheit || "").replace(/[.,]$/, "")];
+      if (!einheit) continue;
+      const name = kurzName(vor, nach || "");
       if (name) rekorde.push({ name, vorher, nachher, einheit, datum: p.datum });
     }
   }
@@ -369,21 +385,41 @@ function zeichnen() {
 
   /* Woche für Woche: Ein magerer Tag steht nie allein, er gehört zu seiner Woche.
      Gewichtige Punkte zuerst, der Rest hinter „weitere zeigen“ – nie als „Kleinigkeiten“ benannt. */
+  /* Kein Tag fehlt stumm: Tage ohne Datei (Abend-Lauf noch nicht gelaufen) bis gestern auffüllen –
+     ein fehlender Tag liest sich an schlechten Abenden wie „da war nichts“ */
+  const alleTage = [...tage];
+  const erster = tage.map(t => t.datum).sort()[0];
+  if (erster) {
+    const gestern = new Date(jetzt.getTime() - jetzt.getTimezoneOffset() * 60000 - 864e5).toISOString().slice(0, 10);
+    for (let d = new Date(erster + "T12:00:00"); d.toISOString().slice(0, 10) <= gestern; d.setDate(d.getDate() + 1)) {
+      const iso = d.toISOString().slice(0, 10);
+      if (!tage.some(t => t.datum === iso)) alleTage.push({ datum: iso, punkte: [], grund: "wird beim nächsten Abend-Lauf nachgeholt" });
+    }
+  }
   const wochen = {};
-  for (const t of tage) (wochen[wochenStart(t.datum)] ||= []).push(t);
+  for (const t of alleTage) (wochen[wochenStart(t.datum)] ||= []).push(t);
   const box = $("wochen"); box.replaceChildren();
   for (const start of Object.keys(wochen).sort().reverse()) {
     const wp = punkte.filter(p => wochenStart(p.datum) === start);
-    if (!wp.length) continue;
     /* Ehrlich benennen: Gibt es in der Woche nur einen Tag, heißt die Karte nach dem Tag */
-    const tageMit = new Set(wp.map(p => p.datum));
-    const nurEinTag = tageMit.size === 1;
+    const nurEinTag = wochen[start].length === 1;
     const karte = el("article", { class: "woche" }, [
-      el("h3", { text: nurEinTag ? datumLang([...tageMit][0]) : "Woche ab " + datumKurz(start) })]);
+      el("h3", { text: nurEinTag ? datumLang(wochen[start][0].datum) : "Woche ab " + datumKurz(start) })]);
     const versteckt = [];
     for (const t of wochen[start].sort((a, b) => b.datum.localeCompare(a.datum))) {
       const tp = wp.filter(p => p.datum === t.datum);
-      if (!tp.length) continue;
+      if (!tp.length) {
+        /* Leerer Tag: ruhig sagen, warum – nie als „0“ */
+        karte.append(el("section", { class: "tag" }, [
+          nurEinTag ? null : el("h4", { text: datumLang(t.datum) }),
+          /* Wichtig: Das Tagebuch sieht nur Chats mit Claude – ein leerer Tag heißt nicht „nichts gemacht“ */
+          el("p", { class: "leer-tag", text: t.grund === "keine Chats mit Claude"
+            ? "Kein Claude-Tag. Was an diesem Tag sonst passiert ist, sieht das Tagebuch nicht."
+            : t.grund === "Chats ohne eigene Beiträge"
+              ? "Nur kurze Chats mit Claude, nichts davon zum Eintragen. Was sonst passiert ist, sieht das Tagebuch nicht."
+              : `Noch leer: ${t.grund || "noch nicht ausgewertet"}.` })]));
+        continue;
+      }
       /* Gewicht fehlt bei alten Einträgen → zählt als gewichtig */
       const stark = tp.filter(p => (p.gewicht ?? 2) >= 2);
       const zeigen = stark.length ? stark : tp;
